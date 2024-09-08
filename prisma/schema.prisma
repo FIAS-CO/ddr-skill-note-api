@@ -22,4 +22,61 @@ model Player {
   updatedAt           DateTime @updatedAt
   totalFlareSkillSp   Int      @default(0)
   totalFlareSkillDp   Int      @default(0)
+  
+  scores            PlayerScore[]
+}
+
+
+model PlayerScore {
+  id         Int    @id @default(autoincrement())
+  playerId   String @db.Uuid
+  songId     Int
+  chartType  String
+  score      Int
+  flareRank  String
+  flareSkill Int
+
+  player Player @relation(fields: [playerId], references: [id])
+  song   Song   @relation(fields: [songId], references: [id])
+
+  @@unique([playerId, songId, chartType])
+}
+
+model Song {
+  id       Int           @id @default(autoincrement())
+  title    String
+  artist   String
+  bpm      Int
+  category String
+  beSp     Int           @default(0)
+  bSp      Int           @default(0)
+  dSp      Int           @default(0)
+  eSp      Int           @default(0)
+  cSp      Int           @default(0)
+  bDp      Int           @default(0)
+  dDp      Int           @default(0)
+  eDp      Int           @default(0)
+  cDp      Int           @default(0)
+
+  scores   PlayerScore[]
+  rankings Ranking[]
+}
+
+model Ranking {
+  id                Int    @id @default(autoincrement())
+  songId            Int
+  grade             String
+  category          String
+  chartType         String
+  overallPercentage Float
+
+  song Song @relation(fields: [songId], references: [id])
+
+  @@unique([songId, grade, category, chartType])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
