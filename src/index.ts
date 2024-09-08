@@ -1,9 +1,34 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import prisma from './db'
 
 const app = new Hono()
 
+const isDevelopment = process.env.NODE_ENV === 'development'
+
+// 環境に応じた設定を選択
+const allowAnyOrigin = isDevelopment
+    ? process.env.DEV_ALLOW_ANY_ORIGIN === 'true'
+    : process.env.PROD_ALLOW_ANY_ORIGIN === 'true'
+
+const allowedOrigins = isDevelopment
+    ? process.env.DEV_ALLOWED_ORIGINS?.split(',') || []
+    : process.env.PROD_ALLOWED_ORIGINS?.split(',') || []
+
+// Hono内蔵のCORSミドルウェアを追加
+app.use('*', cors({
+    origin: (origin) => {
+        return allowAnyOrigin || allowedOrigins.includes(origin) ? origin : null
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    exposeHeaders: ['Content-Length'],
+    maxAge: 600,
+    credentials: true,
+}))
+
+// ルート処理
 app.get('/', (c) => {
     return c.json({ message: 'Hello from DDR API!' })
 })
@@ -20,6 +45,22 @@ app.get('/api/users', async (c) => {
     } catch (error) {
         console.error(error)
         return c.json({ error: 'Failed to fetch users' }, 500)
+    }
+})
+
+// 最近のユーザー一覧を取得
+app.get('/api/recent_users', async (c) => {
+    try {
+        const users = await prisma.player.findMany({
+            take: 30,
+            orderBy: {
+                updatedAt: 'desc'
+            }
+        })
+        return c.json(users)
+    } catch (error) {
+        console.error('Error fetching recent users:', error)
+        return c.json({ error: 'Failed to fetch recent users' }, 500)
     }
 })
 
