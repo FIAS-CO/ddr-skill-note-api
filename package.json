@@ -13,9 +13,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/local-auth": "^2.1.0",
     "@hono/node-server": "^1.12.2",
     "@prisma/client": "^5.19.1",
     "@types/node": "^22.5.4",
+    "googleapis": "^105.0.0",
     "hono": "^4.5.11",
     "pg": "^8.12.0"
   },

@@ -15,9 +15,7 @@ CREATE TABLE "PlayerScore" (
 CREATE TABLE "Song" (
     "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
-    "artist" TEXT NOT NULL,
-    "bpm" INTEGER NOT NULL,
-    "category" TEXT NOT NULL,
+    "version" TEXT NOT NULL,
     "beSp" INTEGER NOT NULL DEFAULT 0,
     "bSp" INTEGER NOT NULL DEFAULT 0,
     "dSp" INTEGER NOT NULL DEFAULT 0,

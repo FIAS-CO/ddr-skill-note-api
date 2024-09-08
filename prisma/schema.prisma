@@ -26,7 +26,6 @@ model Player {
   scores            PlayerScore[]
 }
 
-
 model PlayerScore {
   id         Int    @id @default(autoincrement())
   playerId   String @db.Uuid
@@ -45,9 +44,7 @@ model PlayerScore {
 model Song {
   id       Int           @id @default(autoincrement())
   title    String
-  artist   String
-  bpm      Int
-  category String
+  version  String
   beSp     Int           @default(0)
   bSp      Int           @default(0)
   dSp      Int           @default(0)

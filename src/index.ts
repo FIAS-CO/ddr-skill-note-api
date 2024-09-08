@@ -2,6 +2,8 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import prisma from './db'
+import { getSheetData } from './spreadsheet/sheet'
+import { updateSongsFromSheet } from './spreadsheet/songService'
 
 const app = new Hono()
 
@@ -82,7 +84,7 @@ app.get('/api/users/:id', async (c) => {
 })
 
 // 新しいユーザーを作成
-app.post('/api/users', async (c) => {
+app.post('/api/create-user', async (c) => {
     const body = await c.req.json()
     try {
         const newUser = await prisma.player.create({
@@ -102,9 +104,40 @@ app.post('/api/users', async (c) => {
     }
 })
 
+app.get('/api/update-songs', async (c) => {
+    try {
+        const spreadsheetId = '1HA8RH2ozKQTPvvq2BVcVoOSEMVIldRw89tFtNg8Z4V8';
+        const range = 'MusicNames!A1:O1500';  // 1500行まで取得
+        const sheetData = await getSheetData(spreadsheetId, range);
+
+        if (!sheetData || !Array.isArray(sheetData) || sheetData.length === 0) {
+            return c.json({ error: 'No data received from the spreadsheet' }, 400);
+        }
+
+        const insertedCount = await updateSongsFromSheet(sheetData);
+
+        return c.json({
+            message: 'Songs updated successfully',
+            insertedCount: insertedCount,
+            totalRows: sheetData.length
+        }, 200);
+    } catch (error) {
+        console.error('Error updating songs:', error);
+        return c.json({
+            error: 'Failed to update songs',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+    }
+})
+
+app.use('*', async (c, next) => {
+    console.log(`${c.req.method} ${c.req.url}`);
+    await next();
+});
+
 const port = 3000
 console.log(`Server is running on port ${port}`)
-
+console.log('Registered routes:', app.routes.map(r => `${r.method} ${r.path}`));
 serve({
     fetch: app.fetch,
     port
