@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import prisma from './db'
 import { getSheetData } from './spreadsheet/sheet'
 import { updateSongsFromSheet } from './spreadsheet/songService'
+import { Prisma } from '@prisma/client'
 
 const app = new Hono()
 
@@ -90,12 +91,22 @@ app.post('/api/create-user', async (c) => {
         const newUser = await prisma.player.create({
             data: {
                 name: body.name,
-                totalFlareSkillSp: body.totalFlareSkillSp,
-                totalFlareSkillDp: body.totalFlareSkillDp
+                totalFlareSkillSp: 0,
+                totalFlareSkillDp: 0
             }
         })
         return c.json(newUser, 201)
     } catch (error) {
+        console.error(error)
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2002') {
+                // Unique constraint failed on the `name` field
+                return c.json({
+                    error: 'A user with this name already exists. Please choose a different name.'
+                }, 400)
+            }
+        }
+        // その他のエラー
         console.error(error)
         return c.json({
             error: 'Failed to create user',
