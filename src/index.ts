@@ -5,6 +5,8 @@ import prisma from './db'
 import { getSheetData } from './spreadsheet/sheet'
 import { updateSongsFromSheet } from './spreadsheet/songService'
 import { Prisma } from '@prisma/client'
+import { PlayerScoresService } from './PlayerScoreService'
+import { PlayerStatsService } from './PlayerStatsService'
 
 const app = new Hono()
 
@@ -68,21 +70,20 @@ app.get('/api/recent_users', async (c) => {
 })
 
 // 特定のユーザーを取得
-app.get('/api/users/:id', async (c) => {
-    const id = c.req.param('id')
+app.get('/api/get-player-stat/:userId', async (c) => {
+    const userId = c.req.param('userId');
     try {
-        const user = await prisma.player.findUnique({
-            where: { id }
-        })
-        if (!user) {
-            return c.json({ error: 'User not found' }, 404)
+        const stats = await new PlayerStatsService().getPlayerStats(userId);
+        if (stats === null) {
+            return c.json({ error: 'Player not found' }, 404);
         }
-        return c.json(user)
+        return c.json(stats);
     } catch (error) {
-        console.error(error)
-        return c.json({ error: 'Failed to fetch user' }, 500)
+        console.error('Error fetching player stats:', error);
+        return c.json({ error: 'Failed to fetch player stats' }, 500);
     }
-})
+});
+
 
 // 新しいユーザーを作成
 app.post('/api/create-user', async (c) => {
@@ -115,6 +116,39 @@ app.post('/api/create-user', async (c) => {
     }
 })
 
+app.post('api/delete-user', async (c) => {
+    console.log('api/delete-user')
+    try {
+        const body = await c.req.json()
+        if (!body.id) {
+            return c.json({ error: 'no user found.' }, 400);
+        }
+
+        const result = await prisma.$transaction(async (prisma) => {
+
+            await prisma.playerScore.deleteMany({
+                where: { playerId: body.id }
+            })
+            const deleteUser = await prisma.player.delete({
+                where: { id: body.id }
+            })
+
+            return deleteUser.name
+        });
+
+        return c.json({
+            user: result,
+            message: 'Delete user successfully',
+        }, 200);
+    } catch (error) {
+        console.error('Error removing user:', error);
+        return c.json({
+            error: 'Failed to remove user',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+    }
+})
+
 app.get('/api/update-songs', async (c) => {
     try {
         const spreadsheetId = '1HA8RH2ozKQTPvvq2BVcVoOSEMVIldRw89tFtNg8Z4V8';
@@ -140,6 +174,106 @@ app.get('/api/update-songs', async (c) => {
         }, 500);
     }
 })
+
+app.post('/api/player-scores', async (c) => {
+    const body = await c.req.json();
+    if (!body.playerId ||
+        typeof body.totalFlareSkillSp !== 'number' ||
+        typeof body.totalFlareSkillDp !== 'number' ||
+        !Array.isArray(body.scores) ||
+        body.scores.length === 0) {
+        console.error(body);
+        return c.json({ error: 'Invalid input: expected playerId, totalFlareSkillSp, totalFlareSkillDp, and a non-empty scores array' }, 400);
+    }
+    const { playerId, totalFlareSkillSp, totalFlareSkillDp, scores } = body;
+
+    interface ScoreData {
+        songId: number;
+        chartType: string;
+        score: number;
+        flareRank: string;
+        flareSkill: number;
+        songName: string;
+        category: string;
+        playStyle: string;
+    }
+
+    try {
+        // プレイヤーの存在確認
+        const existingPlayer = await prisma.player.findUnique({
+            where: { id: playerId }
+        });
+
+        if (!existingPlayer) {
+            return c.json({ error: 'Player not found' }, 404);
+        }
+
+        const result = await prisma.$transaction(async (prisma) => {
+            // Playerテーブルの更新
+            await prisma.player.update({
+                where: { id: playerId },
+                data: {
+                    totalFlareSkillSp: totalFlareSkillSp,
+                    totalFlareSkillDp: totalFlareSkillDp,
+                    updatedAt: new Date() // updatedAtを明示的に更新
+                }
+            });
+
+            // 指定されたplayerIdの既存のスコアをすべて削除
+            await prisma.playerScore.deleteMany({
+                where: { playerId: playerId }
+            });
+
+            // 新しいスコアデータをすべて挿入
+            const createdScores = await prisma.playerScore.createMany({
+                data: scores.map((score: ScoreData) => ({
+                    playerId: playerId,
+                    songId: score.songId,
+                    chartType: score.chartType,
+                    score: score.score,
+                    flareRank: score.flareRank,
+                    flareSkill: score.flareSkill
+                })),
+                skipDuplicates: true
+            });
+
+            return createdScores;
+        });
+
+        return c.json({
+            message: 'Player data and scores updated successfully',
+            scoresUpdated: result.count
+        }, 200);
+
+    } catch (error) {
+        console.error('Error updating player data and scores:', error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2003') {
+                return c.json({ error: 'Foreign key constraint failed. Ensure that all songIds exist.' }, 400);
+            }
+        }
+        console.error('UUID:', playerId);
+        return c.json({
+            error: 'Failed to update player data and scores',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+    }
+});
+
+app.get('/api/get-player-scores/:name', async (c) => {
+    const playerName = c.req.param('name');
+    console.log(`get-player-scores/ ${playerName}`)
+    try {
+        const categorizedScores = await new PlayerScoresService().getPlayerScores(playerName);
+        if (categorizedScores === null) {
+            return c.json({ error: 'Player not found' }, 404);
+        }
+        return c.json(categorizedScores);
+    } catch (error) {
+        console.error('Error fetching player scores:', error);
+        return c.json({ error: 'Failed to fetch player scores' }, 500);
+    }
+});
 
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
