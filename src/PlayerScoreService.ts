@@ -102,7 +102,8 @@ export class PlayerScoresService {
             'A': 'WHITE',
             'A20': 'GOLD',
             'A20 PLUS': 'GOLD',
-            'A3': 'GOLD'
+            'A3': 'GOLD',
+            'WORLD': 'GOLD'
         };
 
         return VERSION_CATEGORY_MAP[song.version] || 'CLASSIC';
