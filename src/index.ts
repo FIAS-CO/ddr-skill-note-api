@@ -7,6 +7,7 @@ import { updateSongsFromSheet } from './spreadsheet/songService'
 import { Prisma } from '@prisma/client'
 import { PlayerScoresService } from './PlayerScoreService'
 import { PlayerStatsService } from './PlayerStatsService'
+import { SongRankingSrevice } from './SongRankingSrevice'
 
 const app = new Hono()
 
@@ -267,6 +268,68 @@ app.get('/api/get-player-scores/:name', async (c) => {
         const categorizedScores = await new PlayerScoresService().getPlayerScores(playerName);
         if (categorizedScores === null) {
             return c.json({ error: 'Player not found' }, 404);
+        }
+        return c.json(categorizedScores);
+    } catch (error) {
+        console.error('Error fetching player scores:', error);
+        return c.json({ error: 'Failed to fetch player scores' }, 500);
+    }
+});
+
+interface RankingBaseData {
+    songId: number;
+    category: string;
+    chartType: string;
+    grade: string;
+    spdp: 'SP' | 'DP';
+    players_played: number;
+    total_players: number;
+    flareRank: string;
+}
+
+app.get('/api/update-rankings', async (c) => {
+    try {
+        const baseData = await prisma.$queryRaw<RankingBaseData[]>`SELECT * FROM ranking_base_data`;
+        const rankings = processRankings(baseData);
+
+        await prisma.$transaction([
+            prisma.ranking.deleteMany({}),
+            ...rankings.map(ranking =>
+                prisma.ranking.create({ data: ranking })
+            )
+        ]);
+
+        return c.json({ message: 'Rankings updated successfully', count: rankings.length });
+    } catch (error) {
+        console.error('Error updating rankings:', error);
+        return c.json({ error: 'Failed to update rankings', details: (error as Error).message }, 500);
+    }
+});
+
+function processRankings(baseData: RankingBaseData[]): Prisma.RankingCreateInput[] {
+    return baseData.map(data => {
+        const { songId, category, chartType, grade, spdp, players_played, total_players, flareRank } = data;
+        const overallPercentage = (players_played / total_players) * 100;
+
+        return {
+            song: { connect: { id: songId } }, // Songモデルとの関連付け
+            grade,
+            category,
+            chartType,
+            spdp,
+            flareRank,
+            overallPercentage
+        };
+    });
+}
+
+app.get('/api/ranking-songs/:grade', async (c) => {
+    const grade = c.req.param('grade');
+    console.log(`/api/ranking-songs/${grade}`)
+    try {
+        const categorizedScores = await new SongRankingSrevice().getRankedSongs(grade);
+        if (categorizedScores === null) {
+            return c.json({ error: 'not found' }, 404);
         }
         return c.json(categorizedScores);
     } catch (error) {

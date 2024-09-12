@@ -65,6 +65,8 @@ model Ranking {
   grade             String
   category          String
   chartType         String
+  spdp              String
+  flareRank         String @default("0")
   overallPercentage Float
 
   song Song @relation(fields: [songId], references: [id])
