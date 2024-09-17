@@ -26,8 +26,10 @@ type Category = keyof RankingSongs;
 
 export class SongRankingSrevice {
     async getRankedSongs(grade: string): Promise<RankingSongsSpDp | null> {
+        console.log(`grade:${grade}`)
+        let uppercaseGrade = grade.toUpperCase();
         const scores = await prisma.ranking.findMany({
-            where: { grade: grade },
+            where: { grade: uppercaseGrade },
             include: { song: true }
         })
 
@@ -41,6 +43,7 @@ export class SongRankingSrevice {
             const category = score.category as Category;
             const data = this.transformToRankingSong(score);
 
+            console.log(`${playStyle}/${category}/${data}`)
             rankingSongs[playStyle][category].push(data);
         });
 
