@@ -2,7 +2,6 @@ import { PrismaClient, Ranking, Song } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-
 export interface RankingSongsSpDp {
     SP: RankingSongs;
     DP: RankingSongs;
@@ -43,27 +42,10 @@ export class SongRankingSrevice {
             const category = score.category as Category;
             const data = this.transformToRankingSong(score);
 
-            console.log(`${playStyle}/${category}/${data}`)
             rankingSongs[playStyle][category].push(data);
         });
 
         return rankingSongs;
-    }
-
-    private convertToPlayStyle(value: string): PlayStyle {
-        if (value === 'SP' || value === 'DP') {
-            return value;
-        }
-        console.warn(`Invalid PlayStyle: ${value}. Defaulting to 'SP'`);
-        return 'SP';
-    }
-
-    private convertToCategory(value: string): Category {
-        if (value === 'CLASSIC' || value === 'WHITE' || value === 'GOLD') {
-            return value;
-        }
-        console.warn(`Invalid Category: ${value}. Defaulting to 'CLASSIC'`);
-        return 'CLASSIC';
     }
 
     private transformToRankingSong(score: Ranking & { song: Song }): RankingSong {
