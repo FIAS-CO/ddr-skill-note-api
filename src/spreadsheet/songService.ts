@@ -3,13 +3,9 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export async function updateSongsFromSheet(sheetData: string[][]): Promise<number> {
-  let insertedCount = 0
-
+  let updatedCount = 0;
   await prisma.$transaction(async (tx) => {
-    // Delete all existing songs
-    await tx.song.deleteMany()
-
-    // Prepare data for bulk insert
+    // Prepare data for upsert
     const songsData = sheetData.map(row => ({
       id: validateAndParseInt(row[0], 'ID'),
       title: row[1] || '',
@@ -23,18 +19,20 @@ export async function updateSongsFromSheet(sheetData: string[][]): Promise<numbe
       dDp: validateAndParseInt(row[12], 'D DP'),
       eDp: validateAndParseInt(row[13], 'E DP'),
       cDp: validateAndParseInt(row[14], 'C DP'),
-    }))
+    }));
 
-    // Bulk insert
-    const result = await tx.song.createMany({
-      data: songsData,
-      skipDuplicates: true, // 重複するIDをスキップ
-    })
+    // Upsert each song
+    for (const songData of songsData) {
+      await tx.song.upsert({
+        where: { id: songData.id },
+        update: songData,
+        create: songData,
+      });
+      updatedCount++;
+    }
+  });
 
-    insertedCount = result.count
-  })
-
-  return insertedCount
+  return updatedCount;
 }
 
 function validateAndParseInt(value: string, fieldName: string): number {
