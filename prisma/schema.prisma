@@ -71,7 +71,7 @@ model Ranking {
 
   song Song @relation(fields: [songId], references: [id])
 
-  @@unique([songId, grade, category, chartType])
+  @@unique([songId, grade, category, chartType, spdp, flareRank])
 }
 
 model SystemSetting {

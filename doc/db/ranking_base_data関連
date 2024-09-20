@@ -1,0 +1,105 @@
+-- グレード計算関数の作成
+CREATE OR REPLACE FUNCTION calculate_grade(skill_points integer) RETURNS text AS $$
+BEGIN
+    RETURN CASE
+        WHEN skill_points >= 90000 THEN 'WORLD'
+        WHEN skill_points >= 86250 THEN 'SUN+++'
+        WHEN skill_points >= 82500 THEN 'SUN++'
+        WHEN skill_points >= 78750 THEN 'SUN+'
+        WHEN skill_points >= 75000 THEN 'SUN'
+        WHEN skill_points >= 71250 THEN 'NEPTUNE+++'
+        WHEN skill_points >= 67500 THEN 'NEPTUNE++'
+        WHEN skill_points >= 63750 THEN 'NEPTUNE+'
+        WHEN skill_points >= 60000 THEN 'NEPTUNE'
+        WHEN skill_points >= 56250 THEN 'URANUS+++'
+        WHEN skill_points >= 52500 THEN 'URANUS++'
+        WHEN skill_points >= 48750 THEN 'URANUS+'
+        WHEN skill_points >= 45000 THEN 'URANUS'
+        WHEN skill_points >= 42250 THEN 'SATURN+++'
+        WHEN skill_points >= 39500 THEN 'SATURN++'
+        WHEN skill_points >= 36750 THEN 'SATURN+'
+        WHEN skill_points >= 34000 THEN 'SATURN'
+        WHEN skill_points >= 31500 THEN 'JUPITER+++'
+        WHEN skill_points >= 29000 THEN 'JUPITER++'
+        WHEN skill_points >= 26500 THEN 'JUPITER+'
+        WHEN skill_points >= 24000 THEN 'JUPITER'
+        WHEN skill_points >= 22000 THEN 'MARS+++'
+        WHEN skill_points >= 20000 THEN 'MARS++'
+        WHEN skill_points >= 18000 THEN 'MARS+'
+        WHEN skill_points >= 16000 THEN 'MARS'
+        WHEN skill_points >= 14500 THEN 'EARTH+++'
+        WHEN skill_points >= 13000 THEN 'EARTH++'
+        WHEN skill_points >= 11500 THEN 'EARTH+'
+        WHEN skill_points >= 10000 THEN 'EARTH'
+        WHEN skill_points >= 9000 THEN 'VENUS+++'
+        WHEN skill_points >= 8000 THEN 'VENUS++'
+        WHEN skill_points >= 7000 THEN 'VENUS+'
+        WHEN skill_points >= 6000 THEN 'VENUS'
+        WHEN skill_points >= 5000 THEN 'MERCURY+++'
+        WHEN skill_points >= 4000 THEN 'MERCURY++'
+        WHEN skill_points >= 3000 THEN 'MERCURY+'
+        WHEN skill_points >= 2000 THEN 'MERCURY'
+        WHEN skill_points >= 500 THEN 'NONE+'
+        ELSE 'NONE'
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- メインクエリ
+CREATE VIEW ranking_base_data AS
+WITH player_grades AS (
+    SELECT 
+        "Player".id,
+        calculate_grade("Player"."totalFlareSkillSp") AS grade_sp,
+        calculate_grade("Player"."totalFlareSkillDp") AS grade_dp
+    FROM "Player"
+),
+song_categories AS (
+    SELECT "Song".id,
+           CASE
+               WHEN "Song".version = ANY (ARRAY['1st', '2nd', '3rd', '4th', '5th', 'MAX', 'MAX2', 'EXTREME', 'Super Nova', 'Super Nova2', 'X', 'X2', 'X3']) THEN 'CLASSIC'
+               WHEN "Song".version = ANY (ARRAY['2013', '2014', 'A']) THEN 'WHITE'
+               WHEN "Song".version = ANY (ARRAY['A20', 'A20 PLUS', 'A3', 'WORLD']) THEN 'GOLD'
+               ELSE 'UNKNOWN'
+           END AS category
+    FROM "Song"
+),
+total_players_by_grade AS (
+    SELECT grade_sp AS grade, 'SP' AS spdp, count(*) AS total_players
+    FROM player_grades
+    GROUP BY grade_sp
+    UNION ALL
+    SELECT grade_dp AS grade, 'DP' AS spdp, count(*) AS total_players
+    FROM player_grades
+    GROUP BY grade_dp
+),
+player_scores_with_grades AS (
+    SELECT 
+        ps."songId",
+        ps."chartType",
+        CASE
+            WHEN ps."chartType" = ANY (ARRAY['BSP', 'DSP', 'ESP', 'CSP']) THEN pg.grade_sp
+            ELSE pg.grade_dp
+        END AS grade,
+        CASE
+            WHEN ps."chartType" = ANY (ARRAY['BSP', 'DSP', 'ESP', 'CSP']) THEN 'SP'
+            ELSE 'DP'
+        END AS spdp,
+        ps."playerId",
+        ps."flareRank"
+    FROM "PlayerScore" ps
+    JOIN player_grades pg ON ps."playerId" = pg.id
+)
+SELECT 
+    pswg."songId",
+    s.category,
+    pswg.grade,
+    pswg."flareRank",
+    pswg.spdp,
+    pswg."chartType",
+    count(DISTINCT pswg."playerId")::integer AS players_played,
+    tpg.total_players::integer AS total_players
+FROM player_scores_with_grades pswg
+JOIN song_categories s ON pswg."songId" = s.id
+JOIN total_players_by_grade tpg ON pswg.grade = tpg.grade AND pswg.spdp = tpg.spdp
+GROUP BY pswg."songId", s.category, pswg."flareRank", pswg."chartType", pswg.grade, pswg.spdp, tpg.total_players;
