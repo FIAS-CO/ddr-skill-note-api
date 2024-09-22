@@ -17,6 +17,7 @@ export interface RankingSong {
     title: string;
     level: number;
     flareRank: string;
+    chartType: string;
     overallPercentage: number;
 }
 
@@ -53,6 +54,7 @@ export class SongRankingSrevice {
             title: score.song.title,
             level: this.getLevelFromChartType(score.song, score.chartType),
             flareRank: score.flareRank,
+            chartType: score.chartType.toUpperCase(),
             overallPercentage: score.overallPercentage
         };
     }

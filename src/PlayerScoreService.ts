@@ -13,16 +13,15 @@ export interface PlayStyle {
     GOLD: SkillBookSong[];
 }
 
-export interface SkillBookSong extends BaseSong {
+export interface SkillBookSong {
+    title: string;
     score: number;
+    level: number;
+    chartType: string;
+    flareRank: string;
     flareSkill: number;
 }
 
-export interface BaseSong {
-    title: string;
-    level: number;
-    flareRank: string;
-}
 
 export class PlayerScoresService {
     async getPlayerScores(playerName: string): Promise<CategorizedSongs | null> {
@@ -63,6 +62,7 @@ export class PlayerScoresService {
             title: score.song.title,
             level: this.getLevelFromChartType(score.song, score.chartType),
             flareRank: score.flareRank,
+            chartType: score.chartType.toUpperCase(),
             score: score.score,
             flareSkill: score.flareSkill
         };
