@@ -1,3 +1,9 @@
+name: Auto Deploy
+
+on:
+  push:
+    branches: [ main ]  # mainブランチにプッシュされた時に実行
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
