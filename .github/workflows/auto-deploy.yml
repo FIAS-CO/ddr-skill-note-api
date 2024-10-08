@@ -34,12 +34,3 @@ jobs:
           pm2 restart flarenote-api
         EOF
         
-    
-    - name: Deploy to Server
-      env:
-        SERVER_IP: ${{ secrets.SERVER_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      run: |
-        ssh $SERVER_USER@$SERVER_IP << EOF
-        EOF
