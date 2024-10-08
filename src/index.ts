@@ -408,6 +408,95 @@ app.get('/api/songs/:songId/min-scores/:flareRank', async (c) => {
     }
 })
 
+interface ScoreDistribution {
+    minScore: number;
+    maxScore: number;
+    distribution: Array<{ scoreLowerBound: number; count: number }>;
+}
+
+interface ScoreDistributionResult {
+    songId: number;
+    chartType: string;
+    scoreDistributions: {
+        EX: ScoreDistribution;
+        IX: ScoreDistribution;
+    };
+}
+
+app.get('/api/songs/:songId/score-distribution/:chartType', async (c) => {
+    const songId = parseInt(c.req.param('songId'))
+    const chartType = c.req.param('chartType') // 例: 'ESP', 'CDP'等
+
+    if (isNaN(songId)) {
+        return c.json({ error: 'Invalid songId' }, 400)
+    }
+
+    if (!['BSP', 'DSP', 'ESP', 'CSP', 'BDP', 'DDP', 'EDP', 'CDP'].includes(chartType)) {
+        return c.json({ error: 'Invalid chartType' }, 400)
+    }
+
+    const flareRanks = ['EX', 'IX']
+    const SCORE_INTERVAL = 2000
+    const THEORETICAL_MAX_SCORE = 1000000 // 理論上の最大スコア
+
+    try {
+        const result: ScoreDistributionResult = {
+            songId,
+            chartType,
+            scoreDistributions: {} as { EX: ScoreDistribution; IX: ScoreDistribution }
+        }
+
+        for (const flareRank of flareRanks) {
+            // データベースからスコアを取得
+            const scores = await prisma.playerScore.findMany({
+                where: {
+                    songId: songId,
+                    chartType: chartType,
+                    flareRank: flareRank === 'EX' ? '10' : '9' // データベースでの表現に合わせる
+                },
+                select: {
+                    score: true
+                }
+            })
+
+            if (scores.length === 0) {
+                result.scoreDistributions[flareRank as 'EX' | 'IX'] = { error: 'No scores found' } as any
+                continue
+            }
+
+            // 最小スコアと最大スコアを計算
+            const minScore = Math.max(0, Math.min(...scores.map(s => s.score)))
+            const maxScore = Math.min(THEORETICAL_MAX_SCORE, Math.max(...scores.map(s => s.score)))
+
+            // スコアの範囲を定義（2000点刻み、最大値は計算された最大スコア）
+            const scoreRanges: number[] = []
+            for (let score = minScore; score <= maxScore; score += SCORE_INTERVAL) {
+                scoreRanges.push(score)
+            }
+            if (scoreRanges[scoreRanges.length - 1] !== maxScore) {
+                scoreRanges.push(maxScore)
+            }
+
+            // スコア分布データを作成
+            const distribution = scoreRanges.map((scoreLowerBound, index) => {
+                const upperBound = index < scoreRanges.length - 1 ? scoreRanges[index + 1] : maxScore + 1
+                const count = scores.filter(s => s.score >= scoreLowerBound && s.score < upperBound).length
+                return { scoreLowerBound, count }
+            })
+
+            result.scoreDistributions[flareRank as 'EX' | 'IX'] = {
+                minScore,
+                maxScore,
+                distribution
+            }
+        }
+
+        return c.json(result)
+    } catch (error) {
+        console.error('Error fetching score distribution:', error)
+        return c.json({ error: 'Failed to fetch score distribution' }, 500)
+    }
+})
 
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
