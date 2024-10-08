@@ -30,20 +30,31 @@ export class SongRankingSrevice {
         let uppercaseGrade = grade.toUpperCase();
         const scores = await prisma.ranking.findMany({
             where: { grade: uppercaseGrade },
-            include: { song: true }
-        })
+            include: { song: true },
+            orderBy: { overallPercentage: 'desc' }
+        });
 
         const rankingSongs: RankingSongsSpDp = {
             SP: { CLASSIC: [], WHITE: [], GOLD: [] },
             DP: { CLASSIC: [], WHITE: [], GOLD: [] }
         }
 
+        // Group scores by playStyle and category
+        const groupedScores: { [key: string]: (Ranking & { song: Song })[] } = {};
         scores.forEach(score => {
-            const playStyle = score.spdp as PlayStyle;
-            const category = score.category as Category;
-            const data = this.transformToRankingSong(score);
+            const key = `${score.spdp}-${score.category}`;
+            if (!groupedScores[key]) {
+                groupedScores[key] = [];
+            }
+            groupedScores[key].push(score);
+        });
 
-            rankingSongs[playStyle][category].push(data);
+        // Process each group
+        Object.entries(groupedScores).forEach(([key, scoreGroup]) => {
+            const [playStyle, category] = key.split('-') as [PlayStyle, Category];
+            rankingSongs[playStyle][category] = scoreGroup
+                .slice(0, 50)
+                .map(score => this.transformToRankingSong(score));
         });
 
         return rankingSongs;
