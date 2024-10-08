@@ -25,14 +25,16 @@ jobs:
         ssh $SERVER_USER@$SERVER_IP << EOF
           cd $DEPLOY_PATH
           git pull origin main
+
+          export NVM_DIR="\$HOME/.nvm"
+          [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
+          nvm use 20.17.0 || nvm install 20.17.0
+
+          npm run build
+          pm2 restart flarenote-api
         EOF
         
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm install
-    - run: npm run build
+    
     - name: Deploy to Server
       env:
         SERVER_IP: ${{ secrets.SERVER_IP }}
@@ -40,5 +42,4 @@ jobs:
         DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
       run: |
         ssh $SERVER_USER@$SERVER_IP << EOF
-          /root/.nvm/versions/node/v20.17.0/bin/pm2 restart flarenote-api
         EOF
