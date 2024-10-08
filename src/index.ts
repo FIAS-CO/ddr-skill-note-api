@@ -338,6 +338,77 @@ app.get('/api/ranking-songs/:grade', async (c) => {
     }
 });
 
+app.get('/api/songs/:songId/min-scores', async (c) => {
+    const songId = parseInt(c.req.param('songId'))
+    if (isNaN(songId)) {
+        return c.json({ error: 'Invalid songId' }, 400)
+    }
+
+    try {
+        const scores = await prisma.playerScore.groupBy({
+            by: ['flareRank'],
+            where: {
+                songId: songId
+            },
+            _min: {
+                score: true
+            }
+        })
+
+        const result: { [key: string]: number | string } = {}
+        for (let i = 1; i <= 10; i++) {
+            result[i.toString()] = "no value"
+        }
+
+        scores.forEach(score => {
+            if (score._min.score !== null) {
+                result[score.flareRank] = score._min.score
+            }
+        })
+
+        return c.json(result)
+    } catch (error) {
+        console.error('Error fetching min scores by flare rank:', error)
+        return c.json({ error: 'Failed to fetch min scores' }, 500)
+    }
+})
+
+app.get('/api/songs/:songId/min-scores/:flareRank', async (c) => {
+    const songId = parseInt(c.req.param('songId'))
+    const flareRank = c.req.param('flareRank')
+
+    if (isNaN(songId)) {
+        return c.json({ error: 'Invalid songId' }, 400)
+    }
+
+    if (!['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].includes(flareRank)) {
+        return c.json({ error: 'Invalid flareRank' }, 400)
+    }
+
+    try {
+        const score = await prisma.playerScore.findFirst({
+            where: {
+                songId: songId,
+                flareRank: flareRank
+            },
+            orderBy: {
+                score: 'asc'
+            },
+            select: {
+                score: true
+            }
+        })
+
+        return c.json({
+            [flareRank]: score ? score.score : "no value"
+        })
+    } catch (error) {
+        console.error('Error fetching min score for specific flare rank:', error)
+        return c.json({ error: 'Failed to fetch min score' }, 500)
+    }
+})
+
+
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
     await next();
