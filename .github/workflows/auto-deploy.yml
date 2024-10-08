@@ -40,5 +40,5 @@ jobs:
         DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
       run: |
         ssh $SERVER_USER@$SERVER_IP << EOF
-          pm2 restart flarenote-api
+          /root/.nvm/versions/node/v20.17.0/bin/pm2 restart flarenote-api
         EOF
