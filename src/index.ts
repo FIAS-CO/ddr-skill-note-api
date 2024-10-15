@@ -4,7 +4,7 @@ import { cors } from 'hono/cors'
 import prisma from './db'
 import { getSheetData } from './spreadsheet/sheet'
 import { updateSongsFromSheet } from './spreadsheet/songService'
-import { Prisma } from '@prisma/client'
+import { Prisma, Song } from '@prisma/client'
 import { PlayerScoresService } from './PlayerScoreService'
 import { PlayerStatsService } from './PlayerStatsService'
 import { SongRankingSrevice } from './SongRankingSrevice'
@@ -416,11 +416,27 @@ interface ScoreDistribution {
 
 interface ScoreDistributionResult {
     songId: number;
+    songName: string;
+    songLevel: number;
     chartType: string;
     scoreDistributions: {
         EX: ScoreDistribution;
         IX: ScoreDistribution;
     };
+}
+
+function getLevelFromChartType(song: Song, chartType: string): number {
+    switch (chartType) {
+        case 'BSP': return song.bSp;
+        case 'DSP': return song.dSp;
+        case 'ESP': return song.eSp;
+        case 'CSP': return song.cSp;
+        case 'BDP': return song.bDp;
+        case 'DDP': return song.dDp;
+        case 'EDP': return song.eDp;
+        case 'CDP': return song.cDp;
+        default: return 0;
+    }
 }
 
 app.get('/api/songs/:songId/score-distribution/:chartType', async (c) => {
@@ -440,10 +456,24 @@ app.get('/api/songs/:songId/score-distribution/:chartType', async (c) => {
     const THEORETICAL_MAX_SCORE = 1000000 // 理論上の最大スコア
 
     try {
+        const song = await prisma.song.findUnique({
+            where: {
+                id: songId
+            }
+        })
+
+        if (song === null) {
+            throw new Error(`Song with id ${songId} not found`);
+        }
+
+        var songLevel = getLevelFromChartType(song, chartType);
+
         const result: ScoreDistributionResult = {
             songId,
+            songName: song.title,
+            songLevel: songLevel,
             chartType,
-            scoreDistributions: {} as { EX: ScoreDistribution; IX: ScoreDistribution }
+            scoreDistributions: {} as { EX: ScoreDistribution; IX: ScoreDistribution },
         }
 
         for (const flareRank of flareRanks) {
