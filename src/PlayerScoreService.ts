@@ -14,6 +14,7 @@ export interface PlayStyle {
 }
 
 export interface SkillBookSong {
+    id: number,
     title: string;
     score: number;
     level: number;
@@ -59,6 +60,7 @@ export class PlayerScoresService {
 
     private transformToSkillBookSong(score: PlayerScore & { song: Song }): SkillBookSong {
         return {
+            id: score.song.id,
             title: score.song.title,
             level: this.getLevelFromChartType(score.song, score.chartType),
             flareRank: score.flareRank,

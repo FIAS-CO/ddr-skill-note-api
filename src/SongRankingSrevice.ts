@@ -14,6 +14,7 @@ export interface RankingSongs {
 }
 
 export interface RankingSong {
+    id: number;
     title: string;
     level: number;
     flareRank: string;
@@ -62,6 +63,7 @@ export class SongRankingSrevice {
 
     private transformToRankingSong(score: Ranking & { song: Song }): RankingSong {
         return {
+            id: score.song.id,
             title: score.song.title,
             level: this.getLevelFromChartType(score.song, score.chartType),
             flareRank: score.flareRank,
