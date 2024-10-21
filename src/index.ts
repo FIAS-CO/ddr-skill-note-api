@@ -427,6 +427,7 @@ interface ScoreDistributionResult {
 
 function getLevelFromChartType(song: Song, chartType: string): number {
     switch (chartType) {
+        case 'BESP': return song.beSp;
         case 'BSP': return song.bSp;
         case 'DSP': return song.dSp;
         case 'ESP': return song.eSp;
@@ -447,7 +448,7 @@ app.get('/api/songs/:songId/score-distribution/:chartType', async (c) => {
         return c.json({ error: 'Invalid songId' }, 400)
     }
 
-    if (!['BSP', 'DSP', 'ESP', 'CSP', 'BDP', 'DDP', 'EDP', 'CDP'].includes(chartType)) {
+    if (!['BESP', 'BSP', 'DSP', 'ESP', 'CSP', 'BDP', 'DDP', 'EDP', 'CDP'].includes(chartType)) {
         return c.json({ error: 'Invalid chartType' }, 400)
     }
 
