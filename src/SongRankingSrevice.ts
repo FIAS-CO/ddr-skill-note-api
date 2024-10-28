@@ -107,6 +107,9 @@ export class SongRankingSrevice {
                 chartType: chartType,
                 grade: {
                     in: validGrades
+                },
+                overallPercentage: {
+                    gte: 15
                 }
             }
         })
