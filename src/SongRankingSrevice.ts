@@ -1,4 +1,6 @@
 import { PrismaClient, Ranking, Song } from '@prisma/client';
+import { ChartType, FlareRank } from './types/Types';
+import { convertToDisplayFlareRank } from './util/DdrDefinitionUtil';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +22,12 @@ export interface RankingSong {
     flareRank: string;
     chartType: string;
     overallPercentage: number;
+}
+
+export interface NominatedRanking {
+    grade: string,
+    flareRank: FlareRank,
+    overallPercentage: number
 }
 
 type PlayStyle = keyof RankingSongsSpDp;
@@ -84,5 +92,33 @@ export class SongRankingSrevice {
             case 'CDP': return song.cDp;
             default: return 0;
         }
+    }
+
+    async getNominatedRanking(songId: number, chartType: ChartType): Promise<NominatedRanking[]> {
+        const validGrades = [
+            'WORLD',
+            'SUN+++', 'SUN++', 'SUN+', 'SUN',
+            'NEPTUNE+++', 'NEPTUNE++', 'NEPTUNE+', 'NEPTUNE',
+            'URANUS+++', 'URANUS++', 'URANUS+', 'URANUS'
+        ];
+        const results = await prisma.ranking.findMany({
+            where: {
+                songId: songId,
+                chartType: chartType,
+                grade: {
+                    in: validGrades
+                }
+            }
+        })
+
+        console.log(results)
+
+        const nominatedRanking: NominatedRanking[] = results.map(r => ({
+            grade: r.grade,
+            flareRank: convertToDisplayFlareRank(r.flareRank),
+            overallPercentage: r.overallPercentage
+        }));
+
+        return nominatedRanking;
     }
 }

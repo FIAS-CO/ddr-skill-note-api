@@ -1,4 +1,5 @@
 import { PrismaClient, PlayerScore, Song } from '@prisma/client';
+import { versionToCategory } from './util/DdrDefinitionUtil';
 
 const prisma = new PrismaClient();
 
@@ -85,29 +86,6 @@ export class PlayerScoresService {
     }
 
     private getSongCategory(song: Song): 'CLASSIC' | 'WHITE' | 'GOLD' {
-        const VERSION_CATEGORY_MAP: { [key: string]: 'CLASSIC' | 'WHITE' | 'GOLD' } = {
-            '1st': 'CLASSIC',
-            '2nd': 'CLASSIC',
-            '3rd': 'CLASSIC',
-            '4th': 'CLASSIC',
-            '5th': 'CLASSIC',
-            '6th': 'CLASSIC',
-            '7th': 'CLASSIC',
-            '8th': 'CLASSIC',
-            '9th': 'CLASSIC',
-            '10th': 'CLASSIC',
-            'X': 'CLASSIC',
-            'X2': 'CLASSIC',
-            'X3': 'CLASSIC',
-            '2013': 'WHITE',
-            '2014': 'WHITE',
-            'A': 'WHITE',
-            'A20': 'GOLD',
-            'A20 PLUS': 'GOLD',
-            'A3': 'GOLD',
-            'WORLD': 'GOLD'
-        };
-
-        return VERSION_CATEGORY_MAP[song.version] || 'CLASSIC';
+        return versionToCategory(song.version);
     }
 }

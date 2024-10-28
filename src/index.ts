@@ -7,7 +7,10 @@ import { updateSongsFromSheet } from './spreadsheet/songService'
 import { Prisma, Song } from '@prisma/client'
 import { PlayerScoresService } from './PlayerScoreService'
 import { PlayerStatsService } from './PlayerStatsService'
-import { SongRankingSrevice } from './SongRankingSrevice'
+import { NominatedRanking, SongRankingSrevice } from './SongRankingSrevice'
+import { ScoreDsitrbutionService } from './ScoreDistributionService'
+import { Category, CHART_TYPES, ChartType } from './types/Types'
+import { versionToCategory } from './util/DdrDefinitionUtil'
 
 const app = new Hono()
 
@@ -523,6 +526,103 @@ app.get('/api/songs/:songId/score-distribution/:chartType', async (c) => {
         }
 
         return c.json(result)
+    } catch (error) {
+        console.error('Error fetching score distribution:', error)
+        return c.json({ error: 'Failed to fetch score distribution' }, 500)
+    }
+})
+
+interface SongMetadata {
+    id: number;
+    name: string;
+    chartType: ChartType;
+    level: number;
+    version: string;
+    category: Category;
+    nominatedRanking: NominatedRanking[]
+}
+
+app.get('/api/songs/:songId/metadata/:chartType', async (c) => {
+
+    const id = parseInt(c.req.param('songId'))
+    const chartType = c.req.param('chartType') as ChartType // 例: 'ESP', 'CDP'等
+
+    if (!CHART_TYPES.includes(chartType)) {
+        return c.json({ error: 'Invalid chartType' }, 400)
+    }
+
+    if (isNaN(id)) {
+        return c.json({ error: 'Invalid songId' }, 400)
+    }
+
+    try {
+        const song = await prisma.song.findUnique({
+            where: {
+                id: id
+            }
+        })
+
+        if (song === null) {
+            throw new Error(`Song with id ${id} not found`);
+        }
+
+        var songLevel = getLevelFromChartType(song, chartType);
+
+        const result: SongMetadata = {
+            id: id,
+            name: song.title,
+            level: songLevel,
+            chartType: chartType,
+            version: song.version,
+            category: versionToCategory(song.version),
+            nominatedRanking: await new SongRankingSrevice().getNominatedRanking(id, chartType)
+        }
+
+        return c.json(result);
+    } catch (error) {
+        console.error('Error fetching score distribution:', error)
+        return c.json({ error: 'Failed to get song metadata' }, 500)
+    }
+})
+
+app.get('/api/songs/:songId/details/:chartType/:flareRank', async (c) => {
+    const songId = parseInt(c.req.param('songId'))
+    const chartType = c.req.param('chartType') // 例: 'ESP', 'CDP'等
+    const flareRank = c.req.param('flareRank') // 例: 0~10
+
+    if (isNaN(songId)) {
+        return c.json({ error: 'Invalid songId' }, 400)
+    }
+
+    if (!CHART_TYPES.includes(chartType as ChartType)) {
+        return c.json({ error: 'Invalid chartType' }, 400)
+    }
+
+    const flareRankNum = parseInt(flareRank, 10);
+    if (isNaN(flareRankNum) || flareRankNum < 0 || flareRankNum > 10) {
+        return c.json({ error: 'Invalid flareRank' }, 400)
+    }
+
+    try {
+        const song = await prisma.song.findUnique({
+            where: {
+                id: songId
+            }
+        })
+
+        if (song === null) {
+            throw new Error(`Song with id ${songId} not found`);
+        }
+
+        const distribution = await new ScoreDsitrbutionService().getDistribution(songId, chartType, flareRank)
+
+        return c.json({
+            songId: song.id,
+            songName: song.title,
+            chartType: chartType,
+            flareRank: flareRank,
+            songDistribution: distribution
+        })
     } catch (error) {
         console.error('Error fetching score distribution:', error)
         return c.json({ error: 'Failed to fetch score distribution' }, 500)
