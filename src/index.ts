@@ -129,7 +129,9 @@ app.post('api/delete-user', async (c) => {
         }
 
         const result = await prisma.$transaction(async (prisma) => {
-
+            await prisma.playerSkillHistory.deleteMany({
+                where: { playerId: body.id }
+            })
             await prisma.playerScore.deleteMany({
                 where: { playerId: body.id }
             })

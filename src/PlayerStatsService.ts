@@ -8,8 +8,17 @@ export interface Stats {
 }
 
 export interface PlayerStats {
+    createdAt: string;
+    updatedAt: string;
     SP: Stats;
     DP: Stats;
+    skillHistory: SkillHistoryPoint[]
+}
+
+export interface SkillHistoryPoint {
+    date: string;          // ISO形式の日付文字列
+    spSkillPoint: number;
+    dpSkillPoint: number;
 }
 
 export class PlayerStatsService {
@@ -21,7 +30,20 @@ export class PlayerStatsService {
                 return null;
             }
 
+            // スキル履歴の取得
+            const skillHistory = await prisma.playerSkillHistory.findMany({
+                where: { playerId: player.id },
+                orderBy: { recordedAt: 'asc' }
+            });
+            const skillHistoryData = skillHistory.map(record => ({
+                date: record.recordedAt.toISOString(),
+                spSkillPoint: record.totalFlareSkillSp,
+                dpSkillPoint: record.totalFlareSkillDp
+            }));
+
             const playerStats: PlayerStats = {
+                createdAt: player.createdAt.toISOString(),
+                updatedAt: player.updatedAt.toISOString(),
                 SP: {
                     totalFlareSkill: player.totalFlareSkillSp,
                     grade: this.calculateGrade(player.totalFlareSkillSp)
@@ -29,7 +51,8 @@ export class PlayerStatsService {
                 DP: {
                     totalFlareSkill: player.totalFlareSkillDp,
                     grade: this.calculateGrade(player.totalFlareSkillDp)
-                }
+                },
+                skillHistory: skillHistoryData
             };
 
             return playerStats;
