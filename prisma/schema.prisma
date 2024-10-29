@@ -24,6 +24,19 @@ model Player {
   totalFlareSkillDp   Int      @default(0)
   
   scores            PlayerScore[]
+  skillHistory      PlayerSkillHistory[]
+}
+
+model PlayerSkillHistory {
+  id                Int      @id @default(autoincrement())
+  playerId          String   @db.Uuid
+  totalFlareSkillSp Int
+  totalFlareSkillDp Int
+  recordedAt        DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, recordedAt])
 }
 
 model PlayerScore {

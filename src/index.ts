@@ -214,7 +214,7 @@ app.post('/api/player-scores', async (c) => {
 
         const result = await prisma.$transaction(async (prisma) => {
             // Playerテーブルの更新
-            await prisma.player.update({
+            const updatedPlayer = await prisma.player.update({
                 where: { id: playerId },
                 data: {
                     totalFlareSkillSp: totalFlareSkillSp,
@@ -222,6 +222,18 @@ app.post('/api/player-scores', async (c) => {
                     updatedAt: new Date() // updatedAtを明示的に更新
                 }
             });
+
+            // totalFlareSkillの変更があった場合のみ履歴を追加
+            if (updatedPlayer.totalFlareSkillSp !== existingPlayer.totalFlareSkillSp ||
+                updatedPlayer.totalFlareSkillDp !== existingPlayer.totalFlareSkillDp) {
+                await prisma.playerSkillHistory.create({
+                    data: {
+                        playerId: playerId,
+                        totalFlareSkillSp: updatedPlayer.totalFlareSkillSp,
+                        totalFlareSkillDp: updatedPlayer.totalFlareSkillDp
+                    }
+                });
+            }
 
             // 指定されたplayerIdの既存のスコアをすべて削除
             await prisma.playerScore.deleteMany({
