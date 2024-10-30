@@ -235,6 +235,8 @@ app.post('/api/player-scores', async (c) => {
                         totalFlareSkillDp: updatedPlayer.totalFlareSkillDp
                     }
                 });
+            } else {
+                console.log('FlareSkill is same:', playerId)
             }
 
             // 指定されたplayerIdの既存のスコアをすべて削除
