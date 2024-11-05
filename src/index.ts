@@ -356,6 +356,31 @@ function processRankings(baseData: RankingBaseData[]): Prisma.RankingCreateInput
     });
 }
 
+app.get('/api/ranking-updated-at', async (c) => {
+    try {
+        const setting = await prisma.systemSetting.findUnique({
+            where: { key: "updated-rankings" }
+        });
+
+        if (!setting) {
+            return c.json({ updatedAt: '1900/01/01 00:00 JST' });
+        }
+
+        const formattedDate = setting.updatedAt.toLocaleString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Tokyo'
+        }) + ' JST';
+
+        return c.json({ updatedAt: formattedDate });
+    } catch (error) {
+        return c.json({ updatedAt: '1900/01/01 00:00 JST' });
+    }
+});
+
 app.get('/api/ranking-songs/:grade', async (c) => {
     const grade = c.req.param('grade');
     console.log(`/api/ranking-songs/${grade}`)
