@@ -315,7 +315,21 @@ app.get('/api/update-rankings', async (c) => {
             prisma.ranking.deleteMany({}),
             ...rankings.map(ranking =>
                 prisma.ranking.create({ data: ranking })
-            )
+            ),
+
+            prisma.systemSetting.upsert({
+                where: {
+                    key: 'updated-rankings'
+                },
+                update: {
+                    updatedAt: new Date()
+                },
+                create: {
+                    key: 'updated-rankings',
+                    value: '',
+                    updatedAt: new Date()
+                }
+            })
         ]);
 
         return c.json({ message: 'Rankings updated successfully', count: rankings.length });
