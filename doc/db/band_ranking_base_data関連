@@ -1,0 +1,70 @@
+CREATE OR REPLACE FUNCTION calculate_level_band(skill_points integer)
+RETURNS integer AS
+$$
+BEGIN
+    IF skill_points >= 93000 THEN
+        RETURN 93000;
+    ELSIF skill_points >= 45000 THEN
+        RETURN FLOOR(skill_points/1000) * 1000;
+    ELSE
+        RETURN 0;
+    END IF;
+END;
+$$ 
+LANGUAGE plpgsql;
+
+CREATE VIEW band_ranking_base_data AS
+WITH player_bands AS (
+        SELECT "Player".id,
+           calculate_level_band("Player"."totalFlareSkillSp") AS band_sp,
+           calculate_level_band("Player"."totalFlareSkillDp") AS band_dp
+          FROM "Player"
+       ), song_categories AS (
+        SELECT "Song".id,
+               CASE
+                   WHEN "Song".version = ANY (ARRAY['1st'::text, '2nd'::text, '3rd'::text, '4th'::text, '5th'::text, 'MAX'::text, 'MAX2'::text, 'EXTREME'::text, 'Super Nova'::text, 'Super Nova2'::text, 'X'::text, 'X2'::text, 'X3'::text]) THEN 'CLASSIC'::text
+                   WHEN "Song".version = ANY (ARRAY['2013'::text, '2014'::text, 'A'::text]) THEN 'WHITE'::text
+                   WHEN "Song".version = ANY (ARRAY['A20'::text, 'A20 PLUS'::text, 'A3'::text, 'WORLD'::text]) THEN 'GOLD'::text
+                   ELSE 'UNKNOWN'::text
+               END AS category
+          FROM "Song"
+       ), total_players_by_band AS (
+        SELECT player_bands.band_sp AS level_band,
+           'SP'::text AS spdp,
+           count(*) AS total_players
+          FROM player_bands
+         GROUP BY player_bands.band_sp
+       UNION ALL
+        SELECT player_bands.band_dp AS level_band,
+           'DP'::text AS spdp,
+           count(*) AS total_players
+          FROM player_bands
+         GROUP BY player_bands.band_dp
+       ), player_scores_with_bands AS (
+        SELECT ps."songId",
+           ps."chartType",
+               CASE
+                   WHEN ps."chartType" = ANY (ARRAY['BSP'::text, 'DSP'::text, 'ESP'::text, 'CSP'::text]) THEN pb.band_sp
+                   ELSE pb.band_dp
+               END AS level_band,
+               CASE
+                   WHEN ps."chartType" = ANY (ARRAY['BSP'::text, 'DSP'::text, 'ESP'::text, 'CSP'::text]) THEN 'SP'::text
+                   ELSE 'DP'::text
+               END AS spdp,
+           ps."playerId",
+           ps."flareRank"
+          FROM "PlayerScore" ps
+            JOIN player_bands pb ON ps."playerId" = pb.id
+       )
+SELECT pswb."songId",
+   s.category,
+   pswb.grade,
+   pswb."flareRank",
+   pswb.spdp,
+   pswb."chartType",
+   count(DISTINCT pswb."playerId")::integer AS players_played,
+   tpb.total_players::integer AS total_players
+  FROM player_scores_with_bands pswb
+    JOIN song_categories s ON pswb."songId" = s.id
+    JOIN total_players_by_band tpb ON pswb.level_band = tpb.level_band AND pswb.spdp = tpb.spdp
+ GROUP BY pswb."songId", s.category, pswb."flareRank", pswb."chartType", pswb.level_band, pswb.spdp, tpb.total_players;

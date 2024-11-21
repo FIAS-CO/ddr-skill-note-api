@@ -311,12 +311,21 @@ app.get('/api/update-rankings', async (c) => {
         const baseData = await prisma.$queryRaw<RankingBaseData[]>`SELECT * FROM ranking_base_data`;
         const rankings = processRankings(baseData);
 
+        const bandBaseData = await prisma.$queryRaw<RankingBaseData[]>`
+            SELECT * FROM band_ranking_base_data 
+            WHERE grade >= 75000
+        `;
+        const bandRankings = processRankings(bandBaseData);
+
         await prisma.$transaction([
             prisma.ranking.deleteMany({}),
+            prisma.$executeRaw`ALTER SEQUENCE "Ranking_id_seq" RESTART WITH 1`,
             ...rankings.map(ranking =>
                 prisma.ranking.create({ data: ranking })
             ),
-
+            ...bandRankings.map(ranking =>
+                prisma.ranking.create({ data: ranking })
+            ),
             prisma.systemSetting.upsert({
                 where: {
                     key: 'updated-rankings'
@@ -332,7 +341,7 @@ app.get('/api/update-rankings', async (c) => {
             })
         ]);
 
-        return c.json({ message: 'Rankings updated successfully', count: rankings.length });
+        return c.json({ message: 'Rankings updated successfully', count: rankings.length + bandRankings.length });
     } catch (error) {
         console.error('Error updating rankings:', error);
         return c.json({ error: 'Failed to update rankings', details: (error as Error).message }, 500);
@@ -342,11 +351,12 @@ app.get('/api/update-rankings', async (c) => {
 function processRankings(baseData: RankingBaseData[]): Prisma.RankingCreateInput[] {
     return baseData.map(data => {
         const { songId, category, chartType, grade, spdp, players_played, total_players, flareRank } = data;
+        const gradeStr = grade.toString();
         const overallPercentage = (players_played / total_players) * 100;
 
         return {
             song: { connect: { id: songId } }, // Songモデルとの関連付け
-            grade,
+            grade: gradeStr,
             category,
             chartType,
             spdp,
