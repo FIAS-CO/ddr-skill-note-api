@@ -58,7 +58,7 @@ WITH player_bands AS (
        )
 SELECT pswb."songId",
    s.category,
-   pswb.grade,
+   pswb.level_band AS grade,
    pswb."flareRank",
    pswb.spdp,
    pswb."chartType",
