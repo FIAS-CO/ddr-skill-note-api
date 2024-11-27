@@ -9,10 +9,15 @@ export interface RankingSongsSpDp {
     DP: RankingSongs;
 }
 
+interface CategoryData {
+    songs: RankingSong[];
+    totalCount: number;
+}
+
 export interface RankingSongs {
-    CLASSIC: RankingSong[];
-    WHITE: RankingSong[];
-    GOLD: RankingSong[];
+    CLASSIC: CategoryData;
+    WHITE: CategoryData;
+    GOLD: CategoryData;
 }
 
 export interface RankingSong {
@@ -34,8 +39,8 @@ type PlayStyle = keyof RankingSongsSpDp;
 type Category = keyof RankingSongs;
 
 export class SongRankingSrevice {
-    async getRankedSongs(grade: string): Promise<RankingSongsSpDp | null> {
-        console.log(`grade:${grade}`)
+    async getRankedSongs(grade: string, page: number = 1): Promise<RankingSongsSpDp | null> {
+        console.log(`grade:${grade}, page:${page}`)
         let uppercaseGrade = grade.toUpperCase();
         const scores = await prisma.ranking.findMany({
             where: { grade: uppercaseGrade },
@@ -44,8 +49,16 @@ export class SongRankingSrevice {
         });
 
         const rankingSongs: RankingSongsSpDp = {
-            SP: { CLASSIC: [], WHITE: [], GOLD: [] },
-            DP: { CLASSIC: [], WHITE: [], GOLD: [] }
+            SP: {
+                CLASSIC: { songs: [], totalCount: 0 },
+                WHITE: { songs: [], totalCount: 0 },
+                GOLD: { songs: [], totalCount: 0 }
+            },
+            DP: {
+                CLASSIC: { songs: [], totalCount: 0 },
+                WHITE: { songs: [], totalCount: 0 },
+                GOLD: { songs: [], totalCount: 0 }
+            }
         }
 
         // Group scores by playStyle and category
@@ -58,12 +71,19 @@ export class SongRankingSrevice {
             groupedScores[key].push(score);
         });
 
+        const itemsPerPage = 50;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+
         // Process each group
         Object.entries(groupedScores).forEach(([key, scoreGroup]) => {
             const [playStyle, category] = key.split('-') as [PlayStyle, Category];
-            rankingSongs[playStyle][category] = scoreGroup
-                .slice(0, 50)
-                .map(score => this.transformToRankingSong(score));
+            rankingSongs[playStyle][category] = {
+                songs: scoreGroup
+                    .slice(startIndex, endIndex)
+                    .map(score => this.transformToRankingSong(score)),
+                totalCount: scoreGroup.length
+            };
         });
 
         return rankingSongs;

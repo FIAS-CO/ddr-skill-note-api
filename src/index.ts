@@ -393,9 +393,10 @@ app.get('/api/ranking-updated-at', async (c) => {
 
 app.get('/api/ranking-songs/:grade', async (c) => {
     const grade = c.req.param('grade');
-    console.log(`/api/ranking-songs/${grade}`)
+    const page = parseInt(c.req.query('page') || '1');
+    console.log(`/api/ranking-songs/${grade}?page=${page}`)
     try {
-        const categorizedScores = await new SongRankingSrevice().getRankedSongs(grade);
+        const categorizedScores = await new SongRankingSrevice().getRankedSongs(grade, page);
         if (categorizedScores === null) {
             return c.json({ error: 'not found' }, 404);
         }
