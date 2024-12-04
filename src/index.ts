@@ -167,6 +167,10 @@ app.get('/api/update-songs', async (c) => {
 
         const insertedCount = await updateSongsFromSheet(sheetData);
 
+        const gimmickRange = 'MusicGimmickAndNotes!A1:I1500';  // 1500行まで取得
+        const gimmickData = await getSheetData(spreadsheetId, gimmickRange);
+
+
         return c.json({
             message: 'Songs updated successfully',
             insertedCount: insertedCount,

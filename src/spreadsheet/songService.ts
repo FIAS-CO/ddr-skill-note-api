@@ -35,6 +35,30 @@ export async function updateSongsFromSheet(sheetData: string[][]): Promise<numbe
   return updatedCount;
 }
 
+export async function updateGimmickAndNotesCountFromSheet(sheetData: string[][]): Promise<number> {
+
+  const gimmicksData = sheetData.map(row => ({
+    id: validateAndParseInt(row[0], 'ID'),
+    chartType: row[3],
+    hasSoflan: row[4] === '1',
+    hasStop: row[5] === '1',
+    hasShockArrow: row[6] === '1',
+    notesCount: Number(row[7]) || 0,
+    freezeCount: Number(row[8]) || 0,
+    shockArrowCount: Number(row[9]) || 0,
+  }));
+
+  await prisma.$transaction(async (tx) => {
+
+
+    prisma.gimmickAndNotes.deleteMany({}),
+      prisma.$executeRaw`ALTER SEQUENCE "GimmickAndNotes_id_seq" RESTART WITH 1`,
+      gimmicksData.map(gimmicks =>
+        prisma.gimmickAndNotes.create({ data: gimmicks })
+      )
+  });
+}
+
 function validateAndParseInt(value: string, fieldName: string): number {
   const parsed = parseInt(value)
   if (isNaN(parsed)) {

@@ -87,6 +87,18 @@ model Ranking {
   @@unique([songId, grade, category, chartType, spdp, flareRank])
 }
 
+model GimmickAndNotes {
+  id                Int @id @default(autoincrement())
+  songId            Int
+  chartType         String
+  hasSoflan         Boolean
+  hasStop           Boolean
+  hasShockArrow     Boolean
+  notes             Int
+  freeze            Int
+  shockArrow        Int
+}
+
 model SystemSetting {
   key       String   @id
   value     String
