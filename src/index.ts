@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import prisma from './db'
 import { getSheetData } from './spreadsheet/sheet'
-import { updateSongsFromSheet } from './spreadsheet/songService'
+import { updateGimmickAndNotesCountFromSheet, updateSongsFromSheet } from './spreadsheet/songService'
 import { Prisma, Song } from '@prisma/client'
 import { PlayerScoresService } from './PlayerScoreService'
 import { PlayerStatsService } from './PlayerStatsService'
@@ -167,14 +167,21 @@ app.get('/api/update-songs', async (c) => {
 
         const insertedCount = await updateSongsFromSheet(sheetData);
 
-        const gimmickRange = 'MusicGimmickAndNotes!A1:I1500';  // 1500行まで取得
-        const gimmickData = await getSheetData(spreadsheetId, gimmickRange);
+        const gimmickRange = 'MusicGimmickAndNotes!A2:I1500';  // 1500行まで取得
+        const gimmickData = await getSheetData(spreadsheetId, gimmickRange) || [];
 
+        if (!gimmickData || !Array.isArray(gimmickData) || gimmickData.length === 0) {
+            console.error(`error: 'No data received from the spreadsheet'`);
+        }
+
+        const insertedGimmickCount = await updateGimmickAndNotesCountFromSheet(gimmickData);
 
         return c.json({
             message: 'Songs updated successfully',
             insertedCount: insertedCount,
-            totalRows: sheetData.length
+            totalRows: sheetData.length,
+            insertedGimmick: insertedGimmickCount,
+            totalGimmickRows: gimmickData?.length || 0
         }, 200);
     } catch (error) {
         console.error('Error updating songs:', error);

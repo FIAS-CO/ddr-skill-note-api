@@ -36,27 +36,26 @@ export async function updateSongsFromSheet(sheetData: string[][]): Promise<numbe
 }
 
 export async function updateGimmickAndNotesCountFromSheet(sheetData: string[][]): Promise<number> {
-
   const gimmicksData = sheetData.map(row => ({
-    id: validateAndParseInt(row[0], 'ID'),
-    chartType: row[3],
-    hasSoflan: row[4] === '1',
-    hasStop: row[5] === '1',
-    hasShockArrow: row[6] === '1',
-    notesCount: Number(row[7]) || 0,
-    freezeCount: Number(row[8]) || 0,
-    shockArrowCount: Number(row[9]) || 0,
+    songId: validateAndParseInt(row[0], 'ID'),
+    chartType: row[2],
+    hasSoflan: row[3] === '1',
+    hasStop: row[4] === '1',
+    hasShockArrow: row[5] === '1',
+    notes: Number(row[6]) || 0,
+    freeze: Number(row[7]) || 0,
+    shockArrow: Number(row[8]) || 0,
   }));
 
-  await prisma.$transaction(async (tx) => {
-
-
+  await prisma.$transaction([
     prisma.gimmickAndNotes.deleteMany({}),
-      prisma.$executeRaw`ALTER SEQUENCE "GimmickAndNotes_id_seq" RESTART WITH 1`,
-      gimmicksData.map(gimmicks =>
-        prisma.gimmickAndNotes.create({ data: gimmicks })
-      )
-  });
+    prisma.$executeRaw`ALTER SEQUENCE "GimmickAndNotes_id_seq" RESTART WITH 1`,
+    ...gimmicksData.map(gimmicks =>
+      prisma.gimmickAndNotes.create({ data: gimmicks })
+    )
+  ]);
+
+  return gimmicksData.length
 }
 
 function validateAndParseInt(value: string, fieldName: string): number {
