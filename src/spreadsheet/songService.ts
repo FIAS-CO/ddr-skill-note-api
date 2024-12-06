@@ -36,26 +36,31 @@ export async function updateSongsFromSheet(sheetData: string[][]): Promise<numbe
 }
 
 export async function updateGimmickAndNotesCountFromSheet(sheetData: string[][]): Promise<number> {
-  const gimmicksData = sheetData.map(row => ({
-    songId: validateAndParseInt(row[0], 'ID'),
-    chartType: row[2],
-    hasSoflan: row[3] === '1',
-    hasStop: row[4] === '1',
-    hasShockArrow: row[5] === '1',
-    notes: Number(row[6]) || 0,
-    freeze: Number(row[7]) || 0,
-    shockArrow: Number(row[8]) || 0,
-  }));
+  try {
+    const gimmicksData = sheetData.map(row => ({
+      songId: validateAndParseInt(row[0], 'ID'),
+      chartType: row[2],
+      hasSoflan: row[3] === '1',
+      hasStop: row[4] === '1',
+      hasShockArrow: row[5] === '1',
+      notes: Number(row[6]) || 0,
+      freeze: Number(row[7]) || 0,
+      shockArrow: Number(row[8]) || 0,
+    }));
 
-  await prisma.$transaction([
-    prisma.gimmickAndNotes.deleteMany({}),
-    prisma.$executeRaw`ALTER SEQUENCE "GimmickAndNotes_id_seq" RESTART WITH 1`,
-    ...gimmicksData.map(gimmicks =>
-      prisma.gimmickAndNotes.create({ data: gimmicks })
-    )
-  ]);
+    await prisma.$transaction([
+      prisma.gimmickAndNotes.deleteMany({}),
+      prisma.$executeRaw`ALTER SEQUENCE "GimmickAndNotes_id_seq" RESTART WITH 1`,
+      ...gimmicksData.map(gimmicks =>
+        prisma.gimmickAndNotes.create({ data: gimmicks })
+      )
+    ]);
 
-  return gimmicksData.length
+    return gimmicksData.length
+  } catch (error) {
+    console.error('Failed to update gimmicks and notes:', error);
+    throw error;
+  }
 }
 
 function validateAndParseInt(value: string, fieldName: string): number {
