@@ -11,6 +11,7 @@ import { NominatedRanking, SongRankingSrevice } from './SongRankingSrevice'
 import { ScoreDsitrbutionService } from './ScoreDistributionService'
 import { Category, CHART_TYPES, ChartType } from './types/Types'
 import { versionToCategory } from './util/DdrDefinitionUtil'
+import { GimmickAndNotesService } from './GimmickAndNotesService'
 
 const app = new Hono()
 
@@ -705,6 +706,27 @@ app.get('/api/songs/:songId/details/:chartType/:flareRank', async (c) => {
         return c.json({ error: 'Failed to fetch score distribution' }, 500)
     }
 })
+
+app.get('/api/songs/:songId/gimmicks/:chartType', async (c) => {
+    const songId = parseInt(c.req.param('songId'));
+    const chartType = c.req.param('chartType');
+
+    if (isNaN(songId)) {
+        return c.json({ error: 'Invalid songId' }, 400);
+    }
+
+    if (!CHART_TYPES.includes(chartType as ChartType)) {
+        return c.json({ error: 'Invalid chartType' }, 400);
+    }
+
+    try {
+        const gimmicks = await new GimmickAndNotesService().getGimmickAndNotes(songId, chartType);
+        return c.json(gimmicks);
+    } catch (error) {
+        console.error('Error fetching gimmicks and notes:', error);
+        return c.json({ error: 'Failed to fetch gimmicks and notes' }, 500);
+    }
+});
 
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
