@@ -12,6 +12,7 @@ import { ScoreDsitrbutionService } from './ScoreDistributionService'
 import { Category, CHART_TYPES, ChartType } from './types/Types'
 import { versionToCategory } from './util/DdrDefinitionUtil'
 import { GimmickAndNotesService } from './GimmickAndNotesService'
+import { SongRecommendationService } from './SongRecomendationService'
 
 const app = new Hono()
 
@@ -693,13 +694,18 @@ app.get('/api/songs/:songId/details/:chartType/:flareRank', async (c) => {
         }
 
         const distribution = await new ScoreDsitrbutionService().getDistribution(songId, chartType, flareRank)
-
+        // const recommendations = await new SongRecommendationService().getRecommendations(
+        //     songId,
+        //     chartType as ChartType,
+        //     flareRank
+        // );
         return c.json({
             songId: song.id,
             songName: song.title,
             chartType: chartType,
             flareRank: flareRank,
-            songDistribution: distribution
+            songDistribution: distribution,
+            // recommendations: recommendations,
         })
     } catch (error) {
         console.error('Error fetching score distribution:', error)
