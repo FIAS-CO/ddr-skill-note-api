@@ -12,7 +12,6 @@ import { ScoreDsitrbutionService } from './ScoreDistributionService'
 import { Category, CHART_TYPES, ChartType } from './types/Types'
 import { versionToCategory } from './util/DdrDefinitionUtil'
 import { GimmickAndNotesService } from './GimmickAndNotesService'
-import { SongRecommendationService } from './SongRecomendationService'
 
 const app = new Hono()
 

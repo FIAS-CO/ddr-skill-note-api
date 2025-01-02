@@ -1,4 +1,4 @@
-import { PrismaClient, PlayerScore, Song } from '@prisma/client';
+import { PrismaClient, Song } from '@prisma/client';
 import { ChartType, FlareRank } from './types/Types';
 import { convertToDisplayFlareRank } from './util/DdrDefinitionUtil';
 
