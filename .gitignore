@@ -21,3 +21,5 @@ Thumbs.db
 # npm
 package-lock.json
 service-account-key.json
+
+.VSCodeCounter
