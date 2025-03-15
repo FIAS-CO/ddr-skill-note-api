@@ -12,6 +12,7 @@ import { ScoreDsitrbutionService } from './ScoreDistributionService'
 import { Category, CHART_TYPES, ChartType } from './types/Types'
 import { versionToCategory } from './util/DdrDefinitionUtil'
 import { GimmickAndNotesService } from './GimmickAndNotesService'
+import { AuthController } from './controller/AuthController'
 
 const app = new Hono()
 
@@ -732,6 +733,11 @@ app.get('/api/songs/:songId/gimmicks/:chartType', async (c) => {
         return c.json({ error: 'Failed to fetch gimmicks and notes' }, 500);
     }
 });
+
+
+const authController = new AuthController();
+app.post('/api/auth/connect-google', (c) => authController.connectWithGoogle(c));
+app.post('/api/auth/find-player-by-google', (c) => authController.findPlayerByGoogle(c));
 
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
