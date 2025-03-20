@@ -134,7 +134,6 @@ export class SongRankingSrevice {
             }
         })
 
-        console.log(results)
 
         const nominatedRanking: NominatedRanking[] = results.map(r => ({
             grade: r.grade,
