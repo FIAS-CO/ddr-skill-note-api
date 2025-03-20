@@ -103,4 +103,35 @@ export class GoogleAuthService {
 
         return authAccount?.player || null;
     }
+
+    /**
+    * プレイヤーとGoogleアカウントの紐づけを解除する
+    */
+    async unlinkGoogleFromPlayer(playerId: string) {
+        // プレイヤーの存在確認
+        const player = await prisma.player.findUnique({
+            where: { id: playerId }
+        });
+
+        if (!player) {
+            throw new Error('Player not found');
+        }
+
+        // 認証アカウントを検索
+        const authAccount = await prisma.authAccount.findFirst({
+            where: {
+                playerId,
+                provider: 'google'
+            }
+        });
+
+        if (!authAccount) {
+            throw new Error('Google account not linked to this player');
+        }
+
+        // 認証アカウントを削除
+        return prisma.authAccount.delete({
+            where: { id: authAccount.id }
+        });
+    }
 }

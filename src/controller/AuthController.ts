@@ -64,4 +64,31 @@ export class AuthController {
             }, 401);
         }
     }
+
+    /**
+     * Googleアカウントの連携を解除する
+     */
+    async unlinkGoogle(c: Context) {
+        try {
+            const { playerId } = await c.req.json();
+
+            if (!playerId) {
+                return c.json({ error: 'Player ID is required' }, 400);
+            }
+
+            await this.googleAuthService.unlinkGoogleFromPlayer(playerId);
+
+            return c.json({
+                success: true,
+                message: 'Google account unlinked successfully'
+            });
+        } catch (error) {
+            console.error('Google unlink error:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to unlink Google account',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            }, 400);
+        }
+    }
 }
