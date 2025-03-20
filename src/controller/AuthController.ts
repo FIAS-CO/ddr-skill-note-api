@@ -19,6 +19,8 @@ export class AuthController {
                 return c.json({ error: 'Player ID and Google token are required' }, 400);
             }
 
+            console.log(`Connect With Google:${playerId}`)
+
             const googleData = await this.googleAuthService.verifyGoogleToken(googleToken);
             const player = await this.googleAuthService.connectGoogleToPlayer(playerId, googleData);
 
@@ -75,6 +77,8 @@ export class AuthController {
             if (!playerId) {
                 return c.json({ error: 'Player ID is required' }, 400);
             }
+
+            console.log(`Unlink With Google:${playerId}`)
 
             await this.googleAuthService.unlinkGoogleFromPlayer(playerId);
 
