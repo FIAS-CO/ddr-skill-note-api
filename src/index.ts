@@ -138,7 +138,7 @@ app.post('/api/delete-user', async (c) => {
         // ユーザーが存在しない場合も成功扱いにする
         if (!user) {
             return c.json({
-                user: null,
+                user: "",
                 message: 'User was already deleted or does not exist',
             }, 200);
         }
