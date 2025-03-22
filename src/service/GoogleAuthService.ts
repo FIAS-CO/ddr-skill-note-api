@@ -108,30 +108,79 @@ export class GoogleAuthService {
     * プレイヤーとGoogleアカウントの紐づけを解除する
     */
     async unlinkGoogleFromPlayer(playerId: string) {
-        // プレイヤーの存在確認
-        const player = await prisma.player.findUnique({
-            where: { id: playerId }
-        });
+        try {
+            // プレイヤーの存在確認
+            const player = await prisma.player.findUnique({
+                where: { id: playerId }
+            });
 
-        if (!player) {
-            throw new Error('Player not found');
-        }
-
-        // 認証アカウントを検索
-        const authAccount = await prisma.authAccount.findFirst({
-            where: {
-                playerId,
-                provider: 'google'
+            if (!player) {
+                // プレイヤーが存在しない場合も成功として扱う
+                return {
+                    message: "User was already deleted or does not exist"
+                };
             }
-        });
 
-        if (!authAccount) {
-            throw new Error('Google account not linked to this player');
+            // 認証アカウントを検索
+            const authAccount = await prisma.authAccount.findFirst({
+                where: {
+                    playerId,
+                    provider: 'google'
+                }
+            });
+
+            if (!authAccount) {
+                // 認証アカウントが存在しない場合も成功として扱う
+                return {
+                    message: "Google account was already unlinked or never linked"
+                };
+            }
+
+            // 認証アカウントを削除
+            await prisma.authAccount.delete({
+                where: { id: authAccount.id }
+            });
+
+            return {
+                message: "Google account unlinked successfully"
+            };
+        } catch (error) {
+            throw error;
         }
+    }
 
-        // 認証アカウントを削除
-        return prisma.authAccount.delete({
-            where: { id: authAccount.id }
-        });
+    /**
+     * ユーザーの存在確認とGoogle連携状態を検証
+     */
+    async validateUser(userId: string) {
+        try {
+            // プレイヤーの存在確認
+            const player = await prisma.player.findUnique({
+                where: { id: userId }
+            });
+
+            if (!player) {
+                return {
+                    exists: false,
+                    isGoogleLinked: false
+                };
+            }
+
+            // Google連携状態の確認
+            const googleAccount = await prisma.authAccount.findFirst({
+                where: {
+                    playerId: userId,
+                    provider: 'google'
+                }
+            });
+
+            return {
+                exists: true,
+                isGoogleLinked: !!googleAccount
+            };
+        } catch (error) {
+            console.error('User validation error:', error);
+            throw new Error('Failed to validate user');
+        }
     }
 }

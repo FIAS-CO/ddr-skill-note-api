@@ -122,7 +122,7 @@ app.post('/api/create-user', async (c) => {
     }
 })
 
-app.post('api/delete-user', async (c) => {
+app.post('/api/delete-user', async (c) => {
     console.log('api/delete-user')
     try {
         const body = await c.req.json()
@@ -130,6 +130,20 @@ app.post('api/delete-user', async (c) => {
             return c.json({ error: 'no user found.' }, 400);
         }
 
+        // ユーザーの存在確認
+        const user = await prisma.player.findUnique({
+            where: { id: body.id }
+        });
+
+        // ユーザーが存在しない場合も成功扱いにする
+        if (!user) {
+            return c.json({
+                user: null,
+                message: 'User was already deleted or does not exist',
+            }, 200);
+        }
+
+        // ユーザーが存在する場合は削除処理を実行
         const result = await prisma.$transaction(async (prisma) => {
             await prisma.playerSkillHistory.deleteMany({
                 where: { playerId: body.id }
