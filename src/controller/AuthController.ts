@@ -95,4 +95,29 @@ export class AuthController {
             }, 400);
         }
     }
+
+    /**
+     * ユーザーの存在確認とGoogle連携状態を検証
+     */
+    async validateUser(c: Context) {
+        try {
+            const { id } = await c.req.json();
+
+            if (!id) {
+                return c.json({ error: 'User ID is required' }, 400);
+            }
+
+            console.log(`Validating user: ${id}`);
+
+            const validationResult = await this.googleAuthService.validateUser(id);
+
+            return c.json(validationResult);
+        } catch (error) {
+            console.error('User validation error:', error);
+            return c.json({
+                error: 'Failed to validate user',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            }, 500);
+        }
+    }
 }

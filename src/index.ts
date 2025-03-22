@@ -739,6 +739,7 @@ const authController = new AuthController();
 app.post('/api/auth/connect-google', (c) => authController.connectWithGoogle(c));
 app.post('/api/auth/find-player-by-google', (c) => authController.findPlayerByGoogle(c));
 app.post('/api/auth/unlink-google', (c) => authController.unlinkGoogle(c));
+app.post('/api/validate-user', (c) => authController.validateUser(c));
 
 app.use('*', async (c, next) => {
     console.log(`${c.req.method} ${c.req.url}`);
